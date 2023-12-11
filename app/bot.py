@@ -53,7 +53,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text("Pošalji mi kod za praćenje i dobij status. \n /add XX*********YY napomena -- slediti za statusom sa napomenom. \n /list - za listu praćenih brojeva.")
+    await update.message.reply_text("""Pošalji mi kod za praćenje i dobij status.
+                                    \n /add XX*********YY napomena - slediti za statusom sa napomenom.
+                                    \n /list - za listu praćenih brojeva.
+                                    \n /del XX*********YY - za brisanje broja""")
 
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send all tracked when the command /list is issued."""
@@ -101,6 +104,26 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         
     await update.message.reply_text(f"Ako se pojavi broj {trackno} obavestiću vas.")
           
+async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    pattern = r'^[A-Z]{2}\d{9}[A-Z]{2}$'
+
+    #checking user input for bullshit
+    if len(context.args) >= 1:
+        trackno = context.args[0]
+        if not re.match(pattern, trackno):
+            await update.message.reply_text("Izvinjavam se, ovo ne izgleda kao broj za praćenje sa kojim mogu pomoći.")
+            return
+    else:
+        await update.message.reply_text("Treba broj za brisanje.")
+        return
+
+    user_id = update.message.from_user.id
+
+    md = modifydb.Modifydb('../main.db')
+    md.delete_track(user_id,trackno)
+
+    await update.message.reply_text(f"Broj {trackno} je obrisan.")
 
 async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
@@ -186,6 +209,7 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("add", add_command))
     application.add_handler(CommandHandler("list", list_command))
+    application.add_handler(CommandHandler("del", del_command))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, posta_reply))

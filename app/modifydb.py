@@ -45,6 +45,6 @@ class Modifydb:
         sql = 'SELECT trackno,note FROM main WHERE userid = ? AND received = ? ORDER BY timestamp ASC'
         return self._db.execute(sql, (userid,'no')).fetchall()
 
-    def delete_track(self, trackno):
-        sql = 'DELETE FROM main where trackno = ?'
-        self._db.execute(sql, (trackno))
+    def delete_track(self, userid, trackno):
+        sql = 'DELETE FROM main where userid = ? AND trackno = ?'
+        self._db.execute(sql, (userid,trackno))
