@@ -1,0 +1,10 @@
+[Unit]
+Description=postars
+
+[Service]
+User=root
+WorkingDirectory=/var/goat/postars
+ExecStart=/var/goat/postars/venv/bin/python3 app/bot.py
+
+[Install]
+WantedBy=multi-user.target
