@@ -1,0 +1,5 @@
+python-telegram-bot[job-queue]
+selenium
+webdriver_manager
+selenium-stealth
+requests
