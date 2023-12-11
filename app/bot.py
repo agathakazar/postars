@@ -160,9 +160,8 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
     md = modifydb.Modifydb('../main.db')
     unreceived_list = md.select_unreceived()
-    logging.info(unreceived_list)
+    logging.info(f"Unreceived list: {unreceived_list}")
 
-    # here starts obrabotka
     if unreceived_list is None:
         print('Nothing to check...')
         return None
@@ -178,18 +177,20 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
             timestamp = new_data[i]
             address = new_data[i + 1]
             status = new_data[i + 2]
-        
+
             formatted_message += f"{timestamp}\n{address}\n{status}\n\n"
-        
+
         logging.info(f"timestamp in DB: {db_timestamp}")
         logging.info(f"new timestamp: {new_timestamp}")
+
         if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
             md.update_timestamp(new_timestamp, trackno)
             if "Uručena" in formatted_message:
                 md.set_received(trackno)
             await context.bot.send_message(chat_id=user_id, text=formatted_message)
-    
-    return 
+
+    return
+
 
 def main() -> None:
     """Start the bot."""
