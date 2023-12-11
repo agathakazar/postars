@@ -1,0 +1,48 @@
+---
+- name: Install postars
+  hosts:
+    - roach
+  gather_facts: no
+  vars:
+  tasks:
+    - name: install packages
+      ansible.builtin.apt:
+        name:
+          - chromium
+          - python3
+          - python3-pip
+          - python3-virtualenv
+        state: present
+
+    - name: Create goat directory
+      ansible.builtin.file:
+        path: "/var/goat"
+        state: directory
+
+    - name: copy app stuff
+      ansible.builtin.copy:
+        src: app/
+        dest: "/var/goat/postars/app"
+
+    - name: copy requirements
+      ansible.builtin.copy:
+        src: requirements.txt
+        dest: "/var/goat/postars/requirements.txt"
+
+    - name: make venv and install packages
+      ansible.builtin.pip:
+        chdir: "/var/goat/postars"
+        requirements: "./requirements.txt"
+        virtualenv: "/var/goat/postars/venv"
+
+    - name: Create the service
+      ansible.builtin.copy:
+        src: "postars.service"
+        dest: "/etc/systemd/system/postars.service"
+
+    - name: Start systemd service
+      ansible.builtin.systemd:
+        name: postars
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
