@@ -3,3 +3,4 @@ selenium
 webdriver_manager
 selenium-stealth
 requests
+python-dotenv
