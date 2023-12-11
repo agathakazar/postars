@@ -166,9 +166,11 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         print('Nothing to check...')
         return None
 
-    for row in unreceived_list:
-        user_id, trackno, db_timestamp, note = row
-        new_data = postagde.run_scraper(trackno)
+    # Fetch data for multiple rows in a batch
+    batch_data = [postagde.run_scraper(row[1]) for row in unreceived_list]
+
+    for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
+        new_data = batch_data[i]
         new_timestamp = new_data[0]
         #new_timestamp = "bururururu"
 
