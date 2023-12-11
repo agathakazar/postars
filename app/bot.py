@@ -162,14 +162,6 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
     unreceived_list = md.select_unreceived()
     logging.info(unreceived_list)
 
-    def krasota():
-        user_id = user_id
-        trackno = trackno
-        data_list = postagde.run_scraper(trackno)
-        formatted_message = "Informacije o " + trackno + ":\n"
-
-
-
     # here starts obrabotka
     if unreceived_list is None:
         print('Nothing to check...')
@@ -181,7 +173,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         new_timestamp = new_data[0]
         #new_timestamp = "bururururu"
 
-        formatted_message = "Informacije o " + trackno + " (" + note + "):\n"
+        formatted_message = f"Informacije o {trackno} ({note}):\n"
         for i in range(0, len(new_data), 4):
             timestamp = new_data[i]
             address = new_data[i + 1]
@@ -189,8 +181,8 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         
             formatted_message += f"{timestamp}\n{address}\n{status}\n\n"
         
-        logging.info("timestamp in DB: " + db_timestamp)
-        logging.info("new timestamp: " + new_timestamp)
+        logging.info(f"timestamp in DB: {db_timestamp}")
+        logging.info(f"new timestamp: {new_timestamp}")
         if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
             md.update_timestamp(new_timestamp, trackno)
             if "Uručena" in formatted_message:
