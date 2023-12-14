@@ -21,8 +21,9 @@ import time
 from datetime import datetime
 import re
 from dotenv import load_dotenv
+import asyncio
 
-import postagde
+from postagde import postagde_request
 import modifydb
 
 # hack to not verify webdriver ssl?
@@ -127,52 +128,53 @@ async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
-    def krasota():
+    async def krasota():
         user_id = update.message.from_user.id
         trackno = update.message.text        
-        data_list = postagde.run_scraper(update.message.text)
+        data_list = await postagde_request(update.message.text)
         formatted_message = "Informacije o " + trackno + ":\n"
 
-        for i in range(0, len(data_list), 4):
-            timestamp = data_list[i]
-            message = data_list[i + 1]
-            additional_info = data_list[i + 2]
-        
-            formatted_message += f"{timestamp}\n{message}\n{additional_info}\n\n"
+        if "ispravnost" in data_list:
+            formatted_message += data_list
+            return formatted_message
+        else:
+            for entry in data_list:
+                date = entry['date']
+                location = entry['location']
+                status = entry['status']
+                formatted_message += f"{date}\n{location}\n{status}\n\n"
 
-        logging.info(data_list)
-        data_timestamp = data_list[0]
-        logging.info(data_timestamp)
-
-
-        if "ispravnost" not in formatted_message:
-
+            data_timestamp = data_list[0]['date']
             md = modifydb.Modifydb('../main.db')
             md.insert_data(user_id, trackno, data_timestamp, 'no')
-            if "Uručena" in formatted_message:
+            if "Uručena" in data_list[0]['status']:
                 md.set_received(trackno)
     
         return formatted_message
 
-    await update.message.reply_text(krasota())
+    await update.message.reply_text(await krasota())
     #await update.message.reply_text("Napisaću kada se promeni status paketa " + trackno + ".")
 
 async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
     md = modifydb.Modifydb('../main.db')
     unreceived_list = md.select_unreceived()
     logging.info(f"Unreceived list: {unreceived_list}")
+    # Unreceived list: [(161461120, 'LA050398758HU', '14.12.2023 07:11:40', 'fifine'), (161461120, 'LA050392494HU', '14.12.2023 07:11:46', 'golova'), (161461120, 'LA050389699HU', '14.12.2023 07:11:53', 'random')]
 
     if unreceived_list is None:
-        print('Nothing to check...')
+        logging.info('Nothing to check...')
         return None
 
     # Fetch data for multiple rows in a batch
-    batch_data = [postagde.run_scraper(row[1]) for row in unreceived_list]
+    batch_data = await asyncio.gather(*[postagde_request(row[1]) for row in unreceived_list])
+    logging.info(batch_data)
 
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
         new_data = batch_data[i]
         new_timestamp = new_data[0]
         #new_timestamp = "bururururu"
+        logging.info(f"new_data value: {new_data}")
+        logging.info(f"new_timestamp value: {new_timestamp}")
 
         formatted_message = f"Informacije o {trackno} ({note}):\n"
         for i in range(0, len(new_data), 4):
