@@ -1,92 +1,76 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromiumService
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.os_manager import ChromeType
-import time
-from selenium_stealth import stealth
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support import expected_conditions as EC
+import aiohttp
+import asyncio
+import html
+import re
+import uuid
 
-def run_scraper(input_value):
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument('--disable-blink-features=AutomationControlled')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
+async def postagde_request(trackno):
+    url = "https://wsp.posta.rs/WSPWrapperService.asmx"
+    headers = {
+        "Content-Type": "text/xml; charset=utf-8",
+        "Accept": "*/*",
+        "Accept-Language": "sr-Latn,en-US;q=0.9,en;q=0.8",
+        "User-Agent": "PTTMOB/1 CFNetwork/1410.0.3 Darwin/22.6.0",
+    }
 
-    driver = webdriver.Chrome(
-        options=options,
-        service=ChromiumService(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
-    )
+    # Generate a random UUID for each request
+    transakcija_id = str(uuid.uuid4())
 
-    stealth(
-        driver,
-        user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.105 Safari/537.36',
-        languages=["en-US", "en"],
-        vendor="Google Inc.",
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=False,
-        run_on_insecure_origins=False
-    )
+    # The updated XML template with a random UUID and provided trackno
+    xml_request = f"""<?xml version='1.0' encoding='UTF-8'?>
+    <v:Envelope xmlns:v='http://schemas.xmlsoap.org/soap/envelope/' xmlns:c='http://schemas.xmlsoap.org/soap/encoding/' xmlns:d='http://www.w3.org/2001/XMLSchema' xmlns:i='http://www.w3.org/2001/XMLSchema-instance'>
+      <v:Header />
+      <v:Body>
+        <Transakcija xmlns='http://posta.rs/webservices/' id='o0' c:root='1'>
+          <xmlKlijent i:type='d:string'>&lt;?xml version="1.0" encoding="utf-8"?&gt;&lt;Klijent&gt;&lt;Username&gt;mapuser@ptt.rs&lt;/Username&gt;&lt;IdTipUredjaja&gt;3&lt;/IdTipUredjaja&gt;&lt;VerzijaOS&gt;iOS 8.0 +&lt;/VerzijaOS&gt;&lt;ModelUredjaja&gt;iPhone12,1&lt;/ModelUredjaja&gt;&lt;VerzijaAplikacije&gt;Pošta Srbije, v.1.0.10 (1)&lt;/VerzijaAplikacije&gt;&lt;Jezik&gt;LAT&lt;/Jezik&gt;&lt;/Klijent&gt;</xmlKlijent>
+          <servis i:type='d:int'>11</servis>
+          <idVrstaTransakcije i:type='d:string'>63</idVrstaTransakcije>
+          <idTransakcija i:type='d:string'>{transakcija_id}</idTransakcija>
+          <xmlIn i:type='d:string'>&lt;?xml version="1.0" encoding="utf-8"?&gt;&lt;TTKretanjeIn&gt;&lt;VrstaUsluge&gt;1&lt;/VrstaUsluge&gt;&lt;PrijemniBroj&gt;{trackno}&lt;/PrijemniBroj&gt;&lt;/TTKretanjeIn&gt;</xmlIn>
+          <xmlOut i:type='d:string' />
+          <xmlRezultat i:type='d:string' />
+        </Transakcija>
+      </v:Body>
+    </v:Envelope>
+    """
 
-    url1 = "http://posta.rs/index-stanovnistvo-lat.aspx"
-    driver.get(url1)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, data=xml_request.encode('utf-8')) as response:
+            # Ensure the response was successful (status code 200)
+            if response.status == 200:
+                # Extract data from the response
+                response_text = html.unescape(await response.text())
+                #print(response_text)
+                data_list = await asyncio.to_thread(extract_data, response_text)
+                return data_list
+            else:
+                print(f"Error: Request failed with status code {response.status}")
+                return None
 
-    time.sleep(1)
+def extract_data(response):
+    data_list = []
 
-    select = Select(driver.find_element(By.ID, "cphMain_cphUsluge_ddlVrstaUsluge"))
-    select.select_by_index(1)
+    # Assuming `response` is the content of the response
+    response = response.strip()
 
-    input_field = driver.find_element(By.ID, "cphMain_cphUsluge_tbPratiStatus")
-    submit_button = driver.find_element(By.ID, "cphMain_cphUsluge_btnPratiStatus")
+    search_term = "Pošiljka nije pronađena. Proverite ispravnost unetog broja."
 
-#    input_value = "RB272445407SG"
-    input_field.send_keys(input_value)
+    # Check if the search term is present in the XML response
+    if search_term in response:
+        return search_term
+    else:
+        # Extract content within <Status>, <Datum>, and <Mesto> tags
+        status_matches = re.findall(r'<Status>(.*?)</Status>', response)
+        datum_matches = re.findall(r'<Datum>(.*?)</Datum>', response)
+        mesto_matches = re.findall(r'<Mesto>(.*?)</Mesto>', response)
 
-    submit_button.click()
+        # Iterate through matches and extract information
+        for status, datum, mesto in zip(status_matches, datum_matches, mesto_matches):
+            data_list.append({"date": datum, "location": mesto, "status": status})
 
-    # results
-    span = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, "deoSaRezultatima")))
+    return data_list
 
-    try:
-        span = driver.find_element(By.XPATH, "//span[@class='alert alert-info-posta']")
-        if span.get_attribute('innerText') == "Pošiljka nije pronađena. Proverite ispravnost unetog broja.":
-            error_message = ["Greska: " + span.get_attribute('innerText'), "", "", "\u00a0"] 
-            driver.quit()
-            return error_message
-        else:
-            success_message = ["Gresno: " + span.get_attribute('innerText'), "", "", "\u00a0"]
-            driver.quit()
-            return success_message
-
-    except Exception as e:
-        # raise e
-        pass
-
-    try:
-        table = driver.find_element(By.XPATH, "//table[@class='table tabela-posta']")
-        trs = table.find_elements(By.XPATH, ".//tr")
-
-        results = []
-        for tr in trs:
-            tds = tr.find_elements(By.XPATH, ".//td[not(self::th)]")
-            for td in tds:
-                results.append(td.get_attribute('innerText'))
-        
-        
-        driver.quit()
-        return results
-
-    except Exception as e:
-        # raise e
-        driver.quit()
-        return None
+# Run the event loop
+if __name__ == "__main__":
+    trackno = input("Enter the track number: ")
+    asyncio.run(postagde_request(trackno))
