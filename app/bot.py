@@ -168,42 +168,32 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
     batch_data = await asyncio.gather(*[postagde_request(row[1]) for row in unreceived_list])
     logging.info(f"Batch data: {batch_data}")
 
-    formatted_batch_data = []
-
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
-        track_data = {
-            'trackno': trackno,
-            'data': batch_data[i]
-        }
-
-        formatted_batch_data.append(track_data)
-
-    logging.info(f"Formatted batch data: {formatted_batch_data}")
-
-    for entry in formatted_batch_data:
-        trackno = entry['trackno']
-        data_entries = entry['data']
-
         formatted_message = f"Informacije o {trackno} ({note}):\n"
-        for data in data_entries:
+        timestamps_changed = False  # Flag to check if any timestamps changed
+
+        for data in batch_data[i]:
             new_timestamp = data['date']
             address = data['location']
             status = data['status']
 
             formatted_message += f"{new_timestamp}\n{address}\n{status}\n\n"
 
+            if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
+                md.update_timestamp(new_timestamp, trackno)
+                if "Uručena" in formatted_message:
+                    md.set_received(trackno)
+                timestamps_changed = True
+
         logging.info(f"Timestamp in DB: {db_timestamp}")
         logging.info(f"New timestamp: {new_timestamp}")
 
-        if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
-            md.update_timestamp(new_timestamp, trackno)
-            if "Uručena" in formatted_message:
-                md.set_received(trackno)
+        # Send message only if timestamps have changed
+        if timestamps_changed:
             await context.bot.send_message(chat_id=user_id, text=formatted_message)
+            logging.info(f"Processed entry for {trackno}")
 
     return
-
-
 
 def main() -> None:
     """Start the bot."""
