@@ -61,7 +61,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send all tracked when the command /list is issued."""
-    md = modifydb.Modifydb('../main.db')
+    md = modifydb.Modifydb('./main.db')
     track_list = md.select_by_userid(update.message.from_user.id)
 
 
@@ -95,7 +95,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
     logging.info(context.args)
 
-    md = modifydb.Modifydb('../main.db')
+    md = modifydb.Modifydb('./main.db')
     
     if len(context.args) >= 2:
         note = ' '.join(context.args[1:])
@@ -121,7 +121,7 @@ async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     user_id = update.message.from_user.id
 
-    md = modifydb.Modifydb('../main.db')
+    md = modifydb.Modifydb('./main.db')
     md.delete_track(user_id,trackno)
 
     await update.message.reply_text(f"Broj {trackno} je obrisan.")
@@ -145,7 +145,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 formatted_message += f"{date}\n{location}\n{status}\n\n"
 
             data_timestamp = data_list[0]['date']
-            md = modifydb.Modifydb('../main.db')
+            md = modifydb.Modifydb('./main.db')
             md.insert_data(user_id, trackno, data_timestamp, 'no')
             if "Uručena" in data_list[0]['status']:
                 md.set_received(trackno)
@@ -156,10 +156,9 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     #await update.message.reply_text("Napisaću kada se promeni status paketa " + trackno + ".")
 
 async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
-    md = modifydb.Modifydb('../main.db')
+    md = modifydb.Modifydb('./main.db')
     unreceived_list = md.select_unreceived()
     logging.info(f"Unreceived list: {unreceived_list}")
-    # Unreceived list: [(161461120, 'LA050398758HU', '14.12.2023 07:11:40', 'fifine'), (161461120, 'LA050392494HU', '14.12.2023 07:11:46', 'golova'), (161461120, 'LA050389699HU', '14.12.2023 07:11:53', 'random')]
 
     if unreceived_list is None:
         logging.info('Nothing to check...')
@@ -167,25 +166,34 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Fetch data for multiple rows in a batch
     batch_data = await asyncio.gather(*[postagde_request(row[1]) for row in unreceived_list])
-    logging.info(batch_data)
+    logging.info(f"Batch data: {batch_data}")
+
+    formatted_batch_data = []
 
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
-        new_data = batch_data[i]
-        new_timestamp = new_data[0]
-        #new_timestamp = "bururururu"
-        logging.info(f"new_data value: {new_data}")
-        logging.info(f"new_timestamp value: {new_timestamp}")
+        track_data = {
+            'trackno': trackno,
+            'data': batch_data[i]
+        }
+
+        formatted_batch_data.append(track_data)
+
+    logging.info(f"Formatted batch data: {formatted_batch_data}")
+
+    for entry in formatted_batch_data:
+        trackno = entry['trackno']
+        data_entries = entry['data']
 
         formatted_message = f"Informacije o {trackno} ({note}):\n"
-        for i in range(0, len(new_data), 4):
-            timestamp = new_data[i]
-            address = new_data[i + 1]
-            status = new_data[i + 2]
+        for data in data_entries:
+            new_timestamp = data['date']
+            address = data['location']
+            status = data['status']
 
-            formatted_message += f"{timestamp}\n{address}\n{status}\n\n"
+            formatted_message += f"{new_timestamp}\n{address}\n{status}\n\n"
 
-        logging.info(f"timestamp in DB: {db_timestamp}")
-        logging.info(f"new timestamp: {new_timestamp}")
+        logging.info(f"Timestamp in DB: {db_timestamp}")
+        logging.info(f"New timestamp: {new_timestamp}")
 
         if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
             md.update_timestamp(new_timestamp, trackno)
@@ -194,6 +202,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.send_message(chat_id=user_id, text=formatted_message)
 
     return
+
 
 
 def main() -> None:
