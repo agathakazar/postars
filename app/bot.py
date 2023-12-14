@@ -47,7 +47,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
     await update.message.reply_html(
-        rf"Zdravo, {user.mention_html()}!",
+        f"Zdravo, {user.mention_html()}!"+
+        "\nPošalji mi kod za praćenje i dobij status! \n/add XX123456789YY napomena - slediti za statusom sa napomenom. \n/list - za listu praćenih brojeva. \n/del XX123456789YY - za brisanje broja.",
         #reply_markup=ForceReply(selective=True),
     )
 
