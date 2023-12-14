@@ -4,3 +4,6 @@ webdriver_manager
 selenium-stealth
 requests
 python-dotenv
+aiohttp
+uuid
+asyncio
