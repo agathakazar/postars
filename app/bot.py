@@ -174,6 +174,9 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         timestamps_changed = False  # Flag to check if any timestamps changed
 
         for data in batch_data[i]:
+            if isinstance(data, str):
+                continue
+
             new_timestamp = data['date']
             address = data['location']
             status = data['status']
@@ -186,8 +189,8 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
                     md.set_received(trackno)
                 timestamps_changed = True
 
-        logging.info(f"Timestamp in DB: {db_timestamp}")
-        logging.info(f"New timestamp: {new_timestamp}")
+            logging.info(f"Timestamp in DB: {db_timestamp}")
+            logging.info(f"New timestamp: {new_timestamp}")
 
         # Send message only if timestamps have changed
         if timestamps_changed:
