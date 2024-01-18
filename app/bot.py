@@ -171,7 +171,6 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
         formatted_message = f"Informacije o {trackno} ({note}):\n"
-        timestamps_changed = False  # Flag to check if any timestamps changed
 
         for data in batch_data[i]:
             if isinstance(data, str):
@@ -182,6 +181,8 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
             status = data['status']
 
             formatted_message += f"{new_timestamp}\n{address}\n{status}\n\n"
+
+            timestamps_changed = False  # Flag to check if any timestamps changed
 
             if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
                 md.update_timestamp(new_timestamp, trackno)
