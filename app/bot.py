@@ -36,7 +36,13 @@ bot_api_key = os.environ.get('TG_BOT_KEY_POSTA')
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    encoding="utf-8",
+    handlers=[
+        logging.FileHandler("postars.log"),
+        logging.StreamHandler()
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -82,9 +88,13 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if len(context.args) >= 1:
         trackno = context.args[0]
         if not re.match(pattern, trackno):
+            logging.info(f"User bullshit: {context.args}")
+
             await update.message.reply_text("Izvinjavam se, ovo ne izgleda kao broj za praćenje sa kojim mogu pomoći.")
             return
     else: 
+        logging.info(f"User bullshit: {context.args}")
+
         await update.message.reply_text("Treba broj za praćenje.")
         return
 
@@ -94,7 +104,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     pretty_time = datetime.fromtimestamp(timestamp).strftime('%d.%m.%Y %H:%M:%S')
 
     
-    logging.info(context.args)
+    logging.info(f"Got new thing to track: {context.args}")
 
     md = modifydb.Modifydb('./main.db')
     
@@ -136,6 +146,8 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         formatted_message = "Informacije o " + trackno + ":\n"
 
         if "ispravnost" in data_list:
+            logging.info(f"User bullshit: {trackno}")
+
             formatted_message += data_list
             return formatted_message
         else:
