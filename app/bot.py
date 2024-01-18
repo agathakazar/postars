@@ -192,10 +192,10 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
             logging.info(f"Timestamp in DB: {db_timestamp}")
             logging.info(f"New timestamp: {new_timestamp}")
 
-        # Send message only if timestamps have changed
-        if timestamps_changed:
-            await context.bot.send_message(chat_id=user_id, text=formatted_message)
-            logging.info(f"Processed entry for {trackno}")
+            # Send message only if timestamps have changed
+            if timestamps_changed:
+                await context.bot.send_message(chat_id=user_id, text=formatted_message)
+                logging.info(f"Processed entry for {trackno}")
 
     return
 
