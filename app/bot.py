@@ -46,6 +46,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+timestamp_format = "%d.%m.%Y %H:%M:%S"
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
@@ -183,32 +184,45 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
         formatted_message = f"Informacije o {trackno} ({note}):\n"
+        timestamps_changed = False  # Flag to check if any timestamps changed
 
         for data in batch_data[i]:
             if isinstance(data, str):
-                continue
+                if "ispravnost" not in data:
+                    continue
 
             new_timestamp = data['date']
             address = data['location']
             status = data['status']
 
             formatted_message += f"{new_timestamp}\n{address}\n{status}\n\n"
+            logging.info(f"For loop formatted_message is now: {formatted_message}")
 
-            timestamps_changed = False  # Flag to check if any timestamps changed
+            if not formatted_message.split('\n')[1]:
+                return
 
-            if new_timestamp != db_timestamp and "ispravnost" not in formatted_message:
-                md.update_timestamp(new_timestamp, trackno)
+            last_timestamp = formatted_message.split('\n')[1]
+            
+            logging.info(f"formatted_message = {formatted_message}")
+            logging.info(f"last_timestamp = {last_timestamp}")
+
+            converted_db_timestamp = datetime.strptime(db_timestamp, timestamp_format)
+            converted_last_timestamp = datetime.strptime(last_timestamp, timestamp_format)
+
+            logging.info(f"Converted timestamps: db = {converted_db_timestamp}, new = {converted_last_timestamp}")
+
+            if converted_db_timestamp < converted_last_timestamp:
+                md.update_timestamp(last_timestamp, trackno)
                 if "Uručena" in formatted_message:
                     md.set_received(trackno)
                 timestamps_changed = True
 
             logging.info(f"Timestamp in DB: {db_timestamp}")
-            logging.info(f"New timestamp: {new_timestamp}")
+            logging.info(f"New timestamp: {last_timestamp}")            
 
-            # Send message only if timestamps have changed
-            if timestamps_changed:
-                await context.bot.send_message(chat_id=user_id, text=formatted_message)
-                logging.info(f"Processed entry for {trackno}")
+        if timestamps_changed:
+            await context.bot.send_message(chat_id=user_id, text=formatted_message)
+            logging.info(f"Processed entry for {trackno}")
 
     return
 
