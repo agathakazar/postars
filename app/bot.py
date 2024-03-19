@@ -101,9 +101,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
     user_id = update.message.from_user.id
-    timestamp = time.time()
-    pretty_time = datetime.fromtimestamp(timestamp).strftime('%d.%m.%Y %H:%M:%S')
-
+    pretty_time = '03.01.2009 18:15:05'
     
     logging.info(f"Got new thing to track: {context.args}")
 
