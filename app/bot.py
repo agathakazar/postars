@@ -20,6 +20,7 @@ import os
 import time
 from datetime import datetime
 import re
+import json
 from dotenv import load_dotenv
 import asyncio
 
@@ -141,25 +142,42 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     async def krasota():
         user_id = update.message.from_user.id
         trackno = update.message.text        
-        data_list = await postagde_request(update.message.text)
+        postagde_response = await postagde_request(update.message.text)
         formatted_message = "Informacije o " + trackno + ":\n"
 
-        if "ispravnost" in data_list:
+        if postagde_response.get('Rezultat') == 1:
             logging.info(f"User bullshit: {trackno}")
 
-            formatted_message += data_list
+            # They have 3 similar fields in response for whatever reason
+            # Example of response: {'Rezultat': 1, 'StrOut': None, 'StrRezultat': '{"Poruka":"Pošiljka nije pronađena. Proverite ispravnost unetog broja.","PorukaKorisnik":"Pošiljka nije pronađena. Proverite ispravnost unetog broja.","Info":"Pošiljka nije pronađena. Proverite ispravnost unetog broja."}'}
+            poruka_data = json.loads(postagde_response['StrRezultat'])
+            formatted_message += poruka_data.get('Poruka')
             return formatted_message
         else:
-            for entry in data_list:
-                date = entry['date']
-                location = entry['location']
-                status = entry['status']
-                formatted_message += f"{date}\n{location}\n{status}\n\n"
+            # Getting useful part of the json
+            str_out = json.loads(postagde_response['StrOut'])
+            kretanja = str_out['Kretanja']
 
-            data_timestamp = data_list[0]['date']
+            # Lets format this
+            formatted_message = f"Informacije o {trackno}:\n"
+            latest_date_time = None
+            urucenost = False
+
+            for i, entry in enumerate(kretanja):
+                datum = entry['Datum']
+                status = entry['Status']
+                formatted_message += f"{datum} {status} \n"
+
+                if not latest_date_time:
+                    latest_date_time = datum
+
+                # Check for "Uručena" only in the first entry
+                if i == 0 and "Uručena" in status:
+                    urucenost = True
+
             md = modifydb.Modifydb('./main.db')
-            md.insert_data(user_id, trackno, data_timestamp, 'no')
-            if "Uručena" in data_list[0]['status']:
+            md.insert_data(user_id, trackno, latest_date_time, 'no')
+            if urucenost:
                 md.set_received(trackno)
     
         return formatted_message
@@ -181,44 +199,47 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
     logging.info(f"Batch data: {batch_data}")
 
     for i, (user_id, trackno, db_timestamp, note) in enumerate(unreceived_list):
+        post_data = batch_data[i]
+
+        # Only process entries with Rezultat == 0
+        if post_data.get('Rezultat') != 0:
+            logging.info(f"Skipping entry for {trackno}: Rezultat is not 0.")
+            continue
+
+        # Parse StrOut for movement data
+        str_out = post_data.get('StrOut', '{}')
+        parsed_data = json.loads(str_out)
+        kretanja = parsed_data.get('Kretanja', [])
+
+        # Format the message
         formatted_message = f"Informacije o {trackno} ({note}):\n"
-        timestamps_changed = False  # Flag to check if any timestamps changed
+        latest_timestamp = None
+        urucenost = False  # Track if "Uručena" is in the first entry
 
-        for data in batch_data[i]:
-            if isinstance(data, str):
-                if "ispravnost" not in data:
-                    continue
+        for i, movement in enumerate(kretanja):
+            new_timestamp = movement['Datum']  # Extract the timestamp
+            status = movement['Status']       # Extract the status
+            address = movement['Mesto']       # Extract the address
+            formatted_message += f"{new_timestamp} {address} {status} \n"
 
-            new_timestamp = data['date']
-            address = data['location']
-            status = data['status']
+            if not latest_timestamp:
+                latest_timestamp = new_timestamp
 
-            formatted_message += f"{new_timestamp}\n{address}\n{status}\n\n"
-            logging.info(f"For loop formatted_message is now: {formatted_message}")
+            # Check for "Uručena" only in the first entry
+            if i == 0 and "Uručena" in status:
+                urucenost = True
 
-            if not formatted_message.split('\n')[1]:
-                return
+        # Convert timestamps for comparison and update DB if necessary
+        converted_db_timestamp = datetime.strptime(db_timestamp, "%d.%m.%Y %H:%M:%S")
+        converted_new_timestamp = datetime.strptime(latest_timestamp, "%d.%m.%Y %H:%M:%S")
 
-            last_timestamp = formatted_message.split('\n')[1]
-            
-            logging.info(f"formatted_message = {formatted_message}")
-            logging.info(f"last_timestamp = {last_timestamp}")
+        if converted_db_timestamp < converted_new_timestamp:
+            md.update_timestamp(latest_timestamp, trackno)
+            if urucenost:
+                md.set_received(trackno)
 
-            converted_db_timestamp = datetime.strptime(db_timestamp, timestamp_format)
-            converted_last_timestamp = datetime.strptime(last_timestamp, timestamp_format)
-
-            logging.info(f"Converted timestamps: db = {converted_db_timestamp}, new = {converted_last_timestamp}")
-
-            if converted_db_timestamp < converted_last_timestamp:
-                md.update_timestamp(last_timestamp, trackno)
-                if "Uručena" in formatted_message:
-                    md.set_received(trackno)
-                timestamps_changed = True
-
-            logging.info(f"Timestamp in DB: {db_timestamp}")
-            logging.info(f"New timestamp: {last_timestamp}")            
-
-        if timestamps_changed:
+            # Log the formatted message and send it if timestamps changed
+            logging.info(f"Formatted message for {trackno}:\n{formatted_message}")
             await context.bot.send_message(chat_id=user_id, text=formatted_message)
             logging.info(f"Processed entry for {trackno}")
 
