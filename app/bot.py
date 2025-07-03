@@ -56,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await update.message.reply_html(
         f"Zdravo, {user.mention_html()}!"+
-        "\nPošalji mi kod za praćenje i dobij status! \n/add XX123456789YY napomena - slediti za statusom sa napomenom. \n/list - za listu praćenih brojeva. \n/del XX123456789YY - za brisanje broja.",
+        "\nPošalji mi kod za praćenje i dobij status! \n/add XX123456789YY napomena — slediti za statusom sa napomenom. \n/list — za listu praćenih brojeva. \n/del XX123456789YY — za brisanje broja.",
         #reply_markup=ForceReply(selective=True),
     )
 
@@ -64,9 +64,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     await update.message.reply_text("""Pošalji mi kod za praćenje i dobij status.
-                                    \n /add XX*********YY napomena - slediti za statusom sa napomenom.
-                                    \n /list - za listu praćenih brojeva.
-                                    \n /del XX*********YY - za brisanje broja""")
+                                    \n /add XX*********YY napomena — slediti za statusom sa napomenom.
+                                    \n /list — za listu praćenih brojeva.
+                                    \n /del XX*********YY — za brisanje broja""")
 
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send all tracked when the command /list is issued."""
@@ -77,10 +77,10 @@ async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     formatted_message = "Evo liste brojeva koje pratim:\n"
     if len(track_list) > 0:
         for trackno, note in track_list:
-            formatted_message += f"{trackno} - {note}\n"
+            formatted_message += f"`{trackno}` — {note}\n"
     else:
         formatted_message += f"Ne pratimo ništa\n"
-    await update.message.reply_text(formatted_message)
+    await update.message.reply_text(formatted_message,  parse_mode='MarkdownV2')
 
 async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /add is issued."""
@@ -115,7 +115,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         md.insert_data(user_id, trackno, pretty_time_string, 'no')
         
-    await update.message.reply_text(f"Ako se pojavi broj {trackno} obavestiću vas.")
+    await update.message.reply_text(f"Ako se pojavi broj `{trackno}` obavestiću vas.",  parse_mode='MarkdownV2')
           
 async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
@@ -136,7 +136,7 @@ async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     md = modifydb.Modifydb('./main.db')
     md.delete_track(user_id,trackno)
 
-    await update.message.reply_text(f"Broj {trackno} je obrisan.")
+    await update.message.reply_text(f"Broj `{trackno}` je obrisan.",  parse_mode='MarkdownV2')
 
 async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
@@ -144,7 +144,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         user_id = update.message.from_user.id
         trackno = update.message.text        
         postagde_response = await postagde_request(update.message.text)
-        formatted_message = "Informacije o " + trackno + ":\n"
+        formatted_message = "Informacije o `" + trackno + "`:\n"
 
         if postagde_response.get('Rezultat') == 1:
             logging.info(f"User bullshit: {trackno}")
@@ -160,7 +160,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             kretanja = str_out['Kretanja']
 
             # Lets format this
-            formatted_message = f"Informacije o {trackno}:\n"
+            formatted_message = f"Informacije o `{trackno}`:\n"
             latest_date_time = None
             urucenost = False
 
@@ -183,7 +183,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
         return formatted_message
 
-    await update.message.reply_text(await krasota())
+    await update.message.reply_text(await krasota(),  parse_mode='MarkdownV2')
     #await update.message.reply_text("Napisaću kada se promeni status paketa " + trackno + ".")
 
 async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -215,7 +215,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         kretanja = parsed_data.get('Kretanja', [])
 
         # Format the message
-        formatted_message = f"Informacije o {trackno} ({note}):\n"
+        formatted_message = f"Informacije o `{trackno}` ({note}):\n"
         latest_timestamp = None
         urucenost = False  # Track if "Uručena" is in the first entry
 
@@ -248,7 +248,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
             # Log the formatted message and send it if timestamps changed
             logging.info(f"Formatted message for {trackno}:\n{formatted_message}")
-            await context.bot.send_message(chat_id=user_id, text=formatted_message)
+            await context.bot.send_message(chat_id=user_id, text=formatted_message,  parse_mode='MarkdownV2')
             logging.info(f"Processed entry for {trackno}")
 
     return
