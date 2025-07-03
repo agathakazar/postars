@@ -115,7 +115,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         md.insert_data(user_id, trackno, pretty_time_string, 'no')
         
-    await update.message.reply_text(f"Ako se pojavi broj `{trackno}` obavestiću vas.",  parse_mode='MarkdownV2')
+    await update.message.reply_text(f"Ako se pojavi broj `{trackno}` obavestiću vas.")
           
 async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
@@ -136,7 +136,7 @@ async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     md = modifydb.Modifydb('./main.db')
     md.delete_track(user_id,trackno)
 
-    await update.message.reply_text(f"Broj `{trackno}` je obrisan.",  parse_mode='MarkdownV2')
+    await update.message.reply_text(f"Broj `{trackno}` je obrisan.")
 
 async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
