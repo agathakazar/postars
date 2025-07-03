@@ -115,7 +115,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         md.insert_data(user_id, trackno, pretty_time_string, 'no')
         
-    await update.message.reply_text(f"Ako se pojavi broj `{trackno}` obavestiću vas.")
+    await update.message.reply_text(f"Ako se pojavi broj {trackno} obavestiću vas.")
           
 async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
@@ -248,7 +248,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
             # Log the formatted message and send it if timestamps changed
             logging.info(f"Formatted message for {trackno}:\n{formatted_message}")
-            await context.bot.send_message(chat_id=user_id, text=formatted_message,  parse_mode='MarkdownV2')
+            await context.bot.send_message(chat_id=user_id, text=formatted_message, parse_mode='MarkdownV2')
             logging.info(f"Processed entry for {trackno}")
 
     return
