@@ -24,9 +24,11 @@ class Modifydb:
         try:
             self._db.execute('INSERT INTO main (userid, trackno, timestamp, received, note) VALUES (?,?,?,?,?)', (userid, trackno, timestamp, received, note))
         except sqlite3.IntegrityError:
-            # Handle the case when a duplicate trackno is encountered
-            # For example, you can update the existing row with the new values
-            self._db.execute('UPDATE main SET userid=?, timestamp=?, received=?, note=? WHERE trackno=?', (userid, timestamp, received, note, trackno))
+            # this removes empty spaces and thus checks if note is real, else it doesn't touch the note
+            if note.strip():
+                self._db.execute('UPDATE main SET userid=?, timestamp=?, received=?, note=? WHERE trackno=?', (userid, timestamp, received, note, trackno))
+            else:
+                self._db.execute('UPDATE main SET userid=?, timestamp=?, received=? WHERE trackno=?', (userid, timestamp, received, trackno))
 
     def select_unreceived(self):
         sql = 'SELECT userid, trackno, timestamp, note FROM main WHERE received = ? ORDER BY userid ASC'
