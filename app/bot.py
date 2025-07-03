@@ -144,7 +144,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         user_id = update.message.from_user.id
         trackno = update.message.text        
         postagde_response = await postagde_request(update.message.text)
-        formatted_message = "Informacije o `" + trackno + "`:\n"
+        formatted_message = "Informacije o " + trackno + ":\n"
 
         if postagde_response.get('Rezultat') == 1:
             logging.info(f"User bullshit: {trackno}")
@@ -160,7 +160,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             kretanja = str_out['Kretanja']
 
             # Lets format this
-            formatted_message = f"Informacije o `{trackno}`:\n"
+            formatted_message = f"Informacije o {trackno}:\n"
             latest_date_time = None
             urucenost = False
 
@@ -183,7 +183,7 @@ async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
         return formatted_message
 
-    await update.message.reply_text(await krasota(),  parse_mode='MarkdownV2')
+    await update.message.reply_text(await krasota())
     #await update.message.reply_text("Napisaću kada se promeni status paketa " + trackno + ".")
 
 async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
