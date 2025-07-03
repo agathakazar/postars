@@ -37,6 +37,10 @@ class Modifydb:
         sql = 'UPDATE main SET received = ? WHERE trackno = ?'
         self._db.execute(sql, ('yes',trackno))
 
+    def set_unknown(self, trackno):
+        sql = 'UPDATE main SET received = ? WHERE trackno = ?'
+        self._db.execute(sql, ('maybe',trackno))
+
     def update_timestamp(self, timestamp, trackno):
         sql = 'UPDATE main SET timestamp = ? WHERE trackno = ?'
         self._db.execute(sql, (timestamp, trackno))

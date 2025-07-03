@@ -18,7 +18,7 @@ from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, JobQueue
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import json
 from dotenv import load_dotenv
@@ -102,7 +102,8 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
     user_id = update.message.from_user.id
-    pretty_time = '03.01.2009 18:15:05'
+    pretty_time = datetime.now().replace(microsecond=0)
+    pretty_time_string = pretty_time.strftime("%d.%m.%Y %H:%M:%S")
     
     logging.info(f"Got new thing to track: {context.args}")
 
@@ -110,9 +111,9 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
     if len(context.args) >= 2:
         note = ' '.join(context.args[1:])
-        md.insert_data(user_id, trackno, pretty_time, 'no', note)
+        md.insert_data(user_id, trackno, pretty_time_string, 'no', note)
     else:
-        md.insert_data(user_id, trackno, pretty_time, 'no')
+        md.insert_data(user_id, trackno, pretty_time_string, 'no')
         
     await update.message.reply_text(f"Ako se pojavi broj {trackno} obavestiću vas.")
           
@@ -194,6 +195,8 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         logging.info('Nothing to check...')
         return None
 
+    too_old_timestamp = datetime.now().replace(microsecond=0) - timedelta(days=101)
+
     # Fetch data for multiple rows in a batch
     batch_data = await asyncio.gather(*[postagde_request(row[1]) for row in unreceived_list])
     logging.info(f"Batch data: {batch_data}")
@@ -232,6 +235,11 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         # Convert timestamps for comparison and update DB if necessary
         converted_db_timestamp = datetime.strptime(db_timestamp, "%d.%m.%Y %H:%M:%S")
         converted_new_timestamp = datetime.strptime(latest_timestamp, "%d.%m.%Y %H:%M:%S")
+
+        # this should remove stale tracknumbers
+        logging.info(f"Checking if {converted_db_timestamp} is >= {too_old_timestamp}")
+        if converted_db_timestamp <= too_old_timestamp:
+            md.set_unknown(trackno)
 
         if converted_db_timestamp < converted_new_timestamp:
             md.update_timestamp(latest_timestamp, trackno)
