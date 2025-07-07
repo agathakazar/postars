@@ -136,7 +136,7 @@ async def del_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     md = modifydb.Modifydb('./main.db')
     md.delete_track(user_id,trackno)
 
-    await update.message.reply_text(f"Broj `{trackno}` je obrisan.")
+    await update.message.reply_text(f"Broj {trackno} je obrisan.")
 
 async def posta_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
@@ -215,7 +215,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
         kretanja = parsed_data.get('Kretanja', [])
 
         # Format the message
-        formatted_message = f"Informacije o `{trackno}` ({note}):\n"
+        formatted_message = f"Informacije o {trackno} ({note}):\n"
         latest_timestamp = None
         urucenost = False  # Track if "Uručena" is in the first entry
 
@@ -248,7 +248,7 @@ async def checkrs(context: ContextTypes.DEFAULT_TYPE) -> None:
 
             # Log the formatted message and send it if timestamps changed
             logging.info(f"Formatted message for {trackno}:\n{formatted_message}")
-            await context.bot.send_message(chat_id=user_id, text=formatted_message, parse_mode='MarkdownV2')
+            await context.bot.send_message(chat_id=user_id, text=formatted_message, parse_mode='HTML')
             logging.info(f"Processed entry for {trackno}")
 
     return
